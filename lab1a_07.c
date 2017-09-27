@@ -32,13 +32,14 @@ int main(int argc, char *argv[])
 	int numIndexBits;		//Number of set index bits
 	int numOffsetBits;	//Number of offset bits
 	int numTagBits;			//Number of tag bits
-	int multiplier;
-	int indexvalue;
+	unsigned int multiplier;
+	unsigned int indexvalue;
 	int accesses=0;
 	int hits=0;
 	int misses=0;
 	int lineSizeBits;
 
+	assert( argc != 4 );
 	linesPerSet = strtol( argv[1], NULL, 10);			/*Number of Columns*/
 	lineSize = strtol( argv[2], NULL, 10);				/*in Bytes*/
 	lineSizeBits = lineSize*8;
@@ -65,111 +66,92 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	//INITIAL CACHE
-	/*printf("INITIAL CACHE\n");
-	for (i=0; i<numSets; i++){
-	for (j=0; j<linesPerSet; j++){
-	printf("array[%2d][%2d]=%d\n", i, j, array[i][j]);
-}
-}
-printf("\n");
-for (i=0; i<numSets; i++){
-for (j=0; j<linesPerSet; j++){
-printf("lruarray[%2d][%2d]=%d\n", i, j, lruarray[i][j]);
-}
-}
-printf("\n");
-*/
-/*READ INPUT FILE*/
-unsigned int x;	/*variable for input read line*/
-//char buf[10];
-FILE *fptr;
-fptr = fopen(argv[4], "r");
-while( !feof(fptr)){
-	fscanf(fptr, "%x", &x);
-	accesses++;
-	numIndexBits = setIndexLength(numSets);
-	numOffsetBits = offsetLength(lineSize);
-	//printf("num of inx bits: %d\n", numIndexBits);
-	//printf("num of offset bits: %d\n", numOffsetBits);
-	//unsigned int theTag = strtol(buf, NULL, 16);
-	//unsigned int theTagIndex = strtol(buf, NULL, 16);	//address without offset
-	unsigned int theTagIndex = x >> numOffsetBits;
-	multiplier = (int) pow(2, numIndexBits) - 1;
-	indexvalue = theTagIndex % numSets;		//determine which set it belongs to using AND operation
-	unsigned int theTag = x >> (numIndexBits+numOffsetBits);
+
+	/******READ INPUT FILE******/
+	unsigned int x;	/*variable for input read line*/
+	FILE *fptr;
+	fptr = fopen(argv[4], "r");
+	while( !feof(fptr)){
+		fscanf(fptr, "%x", &x);
+		accesses++;
+		numIndexBits = setIndexLength(numSets);
+		numOffsetBits = offsetLength(lineSize);
+
+		unsigned int theTagIndex = x >> numOffsetBits;
+		//printf("the tagindex is : %x\n", theTagIndex);
+		indexvalue = theTagIndex % numSets;					//determine which set it belongs to using AND operation
+		//printf("the set is : %d\n", indexvalue);
+		unsigned int theTag = x >> (numIndexBits+numOffsetBits);
+		//printf("the tag is : %x\n", theTag);
 
 
-	//int tbpRow = whichSet(x,numSets);		/*calculate which set to access*/
 
+		int safei, safej;
+		for(i = 0; i < linesPerSet; i++){
+			/*FOUND*/
+			if(array[indexvalue][i]==theTag){
+				hits++;
+				int hit = hitWay(linesPerSet, indexvalue, theTag, array);
+				//printf("the hitway is: %d\n", hit);
+				//printf("ELEMENT FOUND IN CACHE\n");
 
-	int safei, safej;
-	int hit = hitWay(linesPerSet, indexvalue, theTag, array);
-	for(i = 0; i < linesPerSet; i++){
-		/*FOUND*/
-		if(array[indexvalue][i]==theTag){
-			hits++;
-			//printf("ELEMENT FOUND IN CACHE\n");
-//			lruarray[indexvalue][i] = 0;
-			safei = indexvalue;				/*element not to be updated in arrays*/
-			safej = i;
+				safei = indexvalue;		/*element not to be updated in arrays*/
+				safej = i;
 
-			/*LRU UPDATE*/
-			updateOnHit(safei,safej,numSets,linesPerSet,lruarray);
-			print(numSets,linesPerSet,array,lruarray);
-			break;	/*end search for found element*/
+				/*LRU UPDATE*/
+				updateOnHit(safei,safej,numSets,linesPerSet,lruarray);
+				break;					/*end search for found element*/
 
-			/*ELEMENT NOT FOUND IN CACHE*/
-		}
-		else{
-			misses++;
-
-			/*IF ARRAY IS FULL*/
-			if(array[indexvalue][linesPerSet-1] != -1){
-
-				int lruIndex = 0;					/*index for element LRU*/
-				for(j = 0; j < linesPerSet; j++){
-					/*Search lruarray for element LRU within row*/
-					if(lruarray[indexvalue][j] > lruarray[indexvalue][lruIndex]){
-						lruIndex = j;
-					}
-				}
-				safei = indexvalue;
-				safej = lruIndex;
+				/*ELEMENT NOT FOUND IN CACHE*/
 			}
-			/*LOOK FOR NEXT EMPTY BLOCK IN CACHE*/
 			else{
-				for(i = 0; i < linesPerSet; i++){
+				misses++;
+
+				/*IF ARRAY IS FULL*/
+				if(array[indexvalue][linesPerSet-1] != -1){
+
+					int lruIndex = 0;		//index for element LRU
+					for(j = 0; j < linesPerSet; j++){
+						/*Search lruarray for element LRU within row*/
+						if(lruarray[indexvalue][j] > lruarray[indexvalue][lruIndex]){
+							lruIndex = j;
+						}
+					}
+					safei = indexvalue;
+					safej = lruIndex;
+				}
+				/*LOOK FOR NEXT EMPTY BLOCK IN CACHE*/
+				else{
+					for(i = 0; i < linesPerSet; i++){
 
 
-					if(array[indexvalue][i] == -1){
-						safei = indexvalue;
-						safej = i;
-						i = linesPerSet;
+						if(array[indexvalue][i] == -1){
+							safei = indexvalue;
+							safej = i;
+							i = linesPerSet;
+						}
 					}
 				}
+				updateOnMiss(numSets, linesPerSet, safei, safej, lruarray, array, theTag);
 			}
-			updateOnMiss(numSets, linesPerSet, safei, safej, lruarray, array, theTag);
-			print(numSets,linesPerSet,array,lruarray);
+
 		}
 
 	}
+	fclose(fptr);
+	/*printf("\n");
+	printf("FINAL CACHE\n");
+	for (i=0; i<numSets; i++){
+		for (j=0; j<linesPerSet; j++){
+			printf("array[%2d][%2d]=%x\n", i, j, array[i][j]);
+		}
+	}*/
 
-}
-fclose(fptr);
-/*printf("\n");
-printf("FINAL CACHE\n");
-for (i=0; i<numSets; i++){
-for (j=0; j<linesPerSet; j++){
-printf("array[%2d][%2d]=%x\n", i, j, array[i][j]);
-}
-}
-*/
-double mr = (double) misses/accesses;
-printf("accesses: %d\n", accesses);
-printf("hit rate: %d\n", hits);
-printf("misses: %d\n", misses);
-printf("miss rate: %lf\n", mr);
+	double mr = (double) misses/accesses;
+	printf("accesses: %d\n", accesses);
+	printf("hit rate: %d\n", hits);
+	printf("misses: %d\n", misses);
+	printf("miss rate: %lf\n", mr);
 }
 
 int logOfTwo(int value){
@@ -199,10 +181,10 @@ int tagBits(int address,int numOfSets,int lineSize){
 }
 
 int hitWay(int linesPerSet, int indexvalue, int theTag, int **array){
-	int i=0;
+	int i;
 	for(i = 0; i < linesPerSet; i++)
 	if(array[indexvalue][i] == theTag)
-	return i;
+		return i;
 	return -1;
 }
 
