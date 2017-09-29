@@ -17,33 +17,33 @@ void print(int, int, int **,int **);
 
 int main(int argc, char *argv[])
 {
-	int linesPerSet;		// Number of lines per set
+	int linesPerSet;			// Number of lines per set
 	int lineSize;				// Size of each line in Bytes
-	int cacheSize;			// Size of entire cache in kiloBytes
-	int cacheSizeBits;	// Size of cache in bits
+	int cacheSize;				// Size of entire cache in kiloBytes
+	int cacheSizeBits;			// Size of cache in bits
 	int numSets;				// Number of sets
 	int **tagArray;				// Tag array
-	int **lruarray;			// LRU array
-	int i;							// Counter (for) Function
-	int j;							// Counter (for) Function
-	int numIndexBits;		// Number of set index bits
-	int numOffsetBits;	// Number of offset bits
-	int numTagBits;			// Number of tag bits
-	int indexvalue;// Set index of the current address
+	int **lruarray;				// LRU array
+	int i;						// Counter (for) Function
+	int j;						// Counter (for) Function
+	int numIndexBits;			// Number of set index bits
+	int numOffsetBits;			// Number of offset bits
+	int numTagBits;				// Number of tag bits
+	int indexvalue;				// Set index of the current address
 	int accesses=0;				// Counter (Total number of accesses
-	int hits=0;						// Counter (number of hits)
-	int misses=0;					// Counter (number of misses)
+	int hits=0;					// Counter (number of hits)
+	int misses=0;				// Counter (number of misses)
 	int lineSizeBits;			// Size of line in bits
 
 		assert( argc != 4 );		// Assert if all the variables were provided to main
 
 		// Storing all the given parameters in local variables
-		linesPerSet = strtol( argv[1], NULL, 10);			/*Number of Columns*/
-		lineSize = strtol( argv[2], NULL, 10);				/*in Bytes*/
+		linesPerSet = strtol( argv[1], NULL, 10);				/*Number of Columns*/
+		lineSize = strtol( argv[2], NULL, 10);					/*in Bytes*/
 		lineSizeBits = lineSize*8;
-		cacheSize = strtol( argv[3], NULL, 10);			/*in Kbytes*/
-		cacheSizeBits = cacheSize*1024*8;												//Cache size in bits * kilo(1024) * bits in byte (8) = cache size in bits				//in Bytes
-		numSets = cacheSizeBits/(lineSizeBits*linesPerSet);		/*Number of Rows*/
+		cacheSize = strtol( argv[3], NULL, 10);					/*in Kbytes*/
+		cacheSizeBits = cacheSize*1024*8;						//Cache size in bits * kilo(1024) * bits in byte (8) = cache size in bits				//in Bytes
+		numSets = cacheSizeBits/(lineSizeBits*linesPerSet);		/*Number of Rows/Sets*/
 		
 		/*INITIALIZE ARRAYS*/
 		tagArray = (int **) malloc(numSets*sizeof(int *));
@@ -72,11 +72,8 @@ int main(int argc, char *argv[])
 			numIndexBits = setIndexLength(numSets);
 			numOffsetBits = offsetLength(lineSize);
 			unsigned int theTagIndex = x >> numOffsetBits;
-							//determine which set it belongs to using AND operation
-			
 			unsigned int theTag = tagBits(x, numIndexBits, numOffsetBits);
 			indexvalue = theTag % numSets;	
-
 
 			int safei, safej;
 			for(i = 0; i < linesPerSet; i++){
